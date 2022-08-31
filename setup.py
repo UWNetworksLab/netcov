@@ -15,7 +15,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='netcov',
-    version='0.1.0',
+    version='0.1.1',
     description='Coverage analyzer for network router configurations',
     author='Xieyang Xu',
     author_email='ashlippers@gmail.com',
