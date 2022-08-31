@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netcov"
+version = "0.1.0"
+authors = [
+  { name="Xieyang Xu", email="ashlippers@gmail.com" },
+]
+description = "Coverage analyzer for network router configurations"
+readme = "README.md"
+license = { file="LICENSE.txt" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/UWNetworksLab/netcov"
+"Bug Tracker" = "https://github.com/UWNetworksLab/netcov/issues"
