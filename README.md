@@ -4,6 +4,7 @@ NetCov is an open-source tool that can be used with [Batfish](https://github.com
 
 NetCov is written in Python and can be used in concert with [pybatfish](https://pybatfish.readthedocs.io/en/latest/notebooks/interacting.html), Batfish's Python API.
 
+[<img src="screenshot_demo_video.png"  width="500">](https://youtube.com/video/FcBD2LhxqOQ)
 
 ## Features
 
@@ -69,7 +70,7 @@ from netcov import NetCovSession as Session
 
 ### Use NetCov for a new pybatfish script/notebook 
 
-We provide a [demo video]() and an [example](examples/demo.ipynb) to help you get started. If you are new to pybatfish, we recommend reading the [pybatfish doc](https://pybatfish.readthedocs.io/en/latest/notebooks/interacting.html) first. 
+We provide a [demo video](https://www.youtube.com/watch?v=FcBD2LhxqOQ) and an [example](examples/demo.ipynb) to help you get started. If you are new to pybatfish, we recommend reading the [pybatfish doc](https://pybatfish.readthedocs.io/en/latest/notebooks/interacting.html) first. 
 
 
 ### Advanced
