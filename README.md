@@ -28,7 +28,7 @@ NetCov can also report fine-grained coverage results as colored annotations on s
 
 <img src="screenshot_annotation.png"  width="500">
 
-You can find an example of the coverage report [here]().
+You can find an example of the coverage report [here](https://rawcdn.githack.com/UWNetworksLab/netcov/main/examples/fattree4/coverage/HTML_REPORT/index.html).
 
 
 
@@ -94,6 +94,7 @@ import logging
 fh = logging.FileHandler('cov.log')
 logging.getLogger('netcov').addHandler(fh)
 ```
+
 
 
 
