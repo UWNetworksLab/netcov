@@ -1,0 +1,42 @@
+{
+  "bgpPeers": [
+    {
+      "hostname": "core-0000",
+      "peerAddress": "20.0.0.1",
+      "ispAttachment": {
+        "interface": "Ethernet0"
+      }
+    }, 
+    {
+      "hostname": "core-0001",
+      "peerAddress": "20.0.0.3",
+      "ispAttachment": {
+        "interface": "Ethernet0"
+      }
+    },
+    {
+      "hostname": "core-0100",
+      "peerAddress": "20.0.0.5",
+      "ispAttachment": {
+        "interface": "Ethernet0"
+      }
+    },
+    {
+      "hostname": "core-0101",
+      "peerAddress": "20.0.0.7",
+      "ispAttachment": {
+        "interface": "Ethernet0"
+      }
+    }
+  ],
+  "ispNodeInfo": [
+    {
+      "asn": 1,
+      "name": "WAN",
+      "role": "PRIVATE_BACKBONE",
+      "trafficFiltering": {
+        "mode": "none"
+      }
+    }
+  ]
+}
