@@ -63,8 +63,9 @@ class Coverage:
         
         if self.latest_result == None:
             self.result()
+        logging.getLogger('netcov').warning(f"Writing coverage report to {os.path.join(self.model.snapshot_path, html_path)}")
         dump_lcov(self.latest_result, self.model.reachable_source, os.path.join(self.model.snapshot_path, lcov_path), True)
-        p = subprocess.Popen(["genhtml", lcov_path, "--output-directory", html_path, "--no-function-coverage", "--title", "NetCov", "--legend"], cwd=self.model.snapshot_path)
+        p = subprocess.Popen(["genhtml", lcov_path, "--output-directory", html_path, "--no-function-coverage", "--title", "NetCov", "--legend"], cwd=self.model.snapshot_path, stdout=subprocess.DEVNULL)
         p.wait()
 
     def collect_trace(self, answer: Answer) -> None:
