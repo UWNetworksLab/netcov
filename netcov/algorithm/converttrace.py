@@ -15,44 +15,26 @@ import logging
 from ..datamodel import *
 from .utils import *
 
+
+
 def convert_traceroute_traces(trs: Iterable[pd.DataFrame], print_stats=False) -> List[DNode]:
     tested_nodes = set()
     action_stats = defaultdict(int)
     tr_cnt = 0
     path_cnt = 0
-    hop_cnt = 0
     for tr in trs:
         tr_cnt += 1
         dst_ip = tr.Flow[0].dstIp
         for path in tr.Traces[0]:
             path_cnt += 1
             action_stats[path[-1][-1]] += 1
-            for hop in path:
-                hop_cnt += 1
-                device_name = hop.node
 
-                for step in hop.steps:
-                    if step.action == "FORWARDED":
-                        prefix = step.detail.routes[0].network
-                        next_hop_ip = step.detail.forwardingDetail.resolvedNextHopIp
-                        next_hop_interface = step.detail.forwardingDetail.outputInterface
-                        tested_node = DataplaneTestNode("forwarded_to_ip", device_name, dst_ip, prefix, next_hop_ip, next_hop_interface)
-                        tested_nodes.add(tested_node)
-                    elif step.action == "ACCEPTED":
-                        interface_name = step.detail.interface
-                        tested_node = DataplaneTestNode("forwarded_to_interface", device_name, dst_ip, None, None, interface_name)
-                        tested_nodes.add(tested_node)
-                    elif step.action in ["DELIVERED_TO_SUBNET", "EXITS_NETWORK"]:
-                        interface_name = step.detail.outputInterface
-                        next_hop_ip = step.detail.resolvedNexthopIp
-                        tested_node = DataplaneTestNode("forwarded_to_interface", device_name, dst_ip, None, next_hop_ip, interface_name)
-                        tested_nodes.add(tested_node)
-                
+            tested_nodes.update(convert_traceroute_path(path, dst_ip))
+
     if print_stats:
         print("Traceroute stats:")
         print(f"  Count of traceroutes: {tr_cnt}")
         print(f"  Count of paths:       {path_cnt}")
-        print(f"  Count of hops:        {hop_cnt}")
         for action, cnt in action_stats.items():
             print(f"      {action} : {cnt}")
             

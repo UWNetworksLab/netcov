@@ -885,25 +885,9 @@ def matcher_l3_path_from_tested(node: DNode) -> bool:
     return False
 
 def worker_l3_path_from_tested(network: Network, node: DNode) -> Tuple[List[DNode], List[DNode], List[DNode]]:
-    derived = []
     node: L3PathNode = node
 
-    dst_ip = node.dst_ip
-    for hop in node.path:
-        device_name = hop.node
-
-        for step in hop.steps:
-            if step.action == "FORWARDED":
-                prefix = step.detail.routes[0].network
-                next_hop_ip = step.detail.forwardingDetail.resolvedNextHopIp
-                next_hop_interface = step.detail.forwardingDetail.outputInterface
-                tested_node = DataplaneTestNode("forwarded_to_ip", device_name, dst_ip, prefix, next_hop_ip, next_hop_interface)
-                derived.append(tested_node)
-            elif step.action == "ACCEPTED":
-                interface_name = step.detail.interface
-                tested_node = DataplaneTestNode("forwarded_to_interface", device_name, dst_ip, None, None, interface_name)
-                derived.append(tested_node)
-
+    derived = convert_traceroute_path(node.path, node.dst_ip)
     return derived, derived, derived
 
 lazy_l3_path_from_tested = LazyTemplate(

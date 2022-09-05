@@ -91,3 +91,28 @@ def default_route_from_isp(session: BgpSessionStatus) -> BgpRoute:
         originType='egp',
         sourceProtocol='bgp',
     )
+
+def convert_traceroute_path(path: Trace, dst_ip: str) -> List[DNode]:
+    tested_nodes = set()
+    for hop in path:
+        device_name = hop.node
+        for step in hop.steps:
+            if step.action == "FORWARDED":
+                prefix = step.detail.routes[0].network
+                next_hop_ip = step.detail.forwardingDetail.resolvedNextHopIp
+                next_hop_interface = step.detail.forwardingDetail.outputInterface
+                if next_hop_ip == None and next_hop_interface != None:
+                    tested_node = DataplaneTestNode("forwarded_to_interface", device_name, dst_ip, prefix, None, next_hop_interface)
+                else:
+                    tested_node = DataplaneTestNode("forwarded_to_ip", device_name, dst_ip, prefix, next_hop_ip, next_hop_interface)
+                tested_nodes.add(tested_node)
+            elif step.action == "ACCEPTED":
+                interface_name = step.detail.interface
+                tested_node = DataplaneTestNode("forwarded_to_interface", device_name, dst_ip, None, None, interface_name)
+                tested_nodes.add(tested_node)
+            elif step.action in ["DELIVERED_TO_SUBNET", "EXITS_NETWORK"]:
+                interface_name = step.detail.outputInterface
+                next_hop_ip = step.detail.resolvedNexthopIp
+                tested_node = DataplaneTestNode("forwarded_to_interface", device_name, dst_ip, None, next_hop_ip, interface_name)
+                tested_nodes.add(tested_node)
+    return list(tested_nodes)
