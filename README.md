@@ -24,6 +24,7 @@ NetCov supports configuration syntax of the following vendors:
 | Arista             | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | Palo Alto Networks | :heavy_check_mark: |                    |                    |                    |                    |                    |
 
+If you’d like support for additional [vendors](https://pybatfish.readthedocs.io/en/latest/supported_devices.html) (which are supported by Batfish but unsupported by NetCov) or currently-unsupported configuration features, let us know via [GitHub issue](https://github.com/UWNetworksLab/netcov/issues). We'll try to add support, and it would help if you share a configuration example. You may want to use an [anonymizer](https://github.com/intentionet/netconan) before sharing.
 
 NetCov reports configuration coverage as the percentage of configuration lines that are covered, such as:
 
