@@ -104,7 +104,7 @@ class Device:
     def __init__(self, name: str):
         self.name: str = name
         self.vrfs: Dict[str, Vrf] = {}
-        self.is_isp: bool = is_isp(name)
+        self.is_virtual: bool = is_virtual_node(name)
         self.routemaps: Dict[str, Routemap] = {}
         self.raw_policies: List[str] = []
         self.interface_configs: Dict[str, InterfaceConfig] = {}
@@ -135,6 +135,13 @@ class Device:
                     return session
         return None
 
+    def find_bgp_session_with_as(self, remote_as: int) -> Optional[BgpSessionStatus]:
+        for vrf in self.vrfs.values():
+            for session in vrf.bgp_sessions:
+                if int(session.remote_as) == int(remote_as):
+                    return session
+        return None
+
     def find_bgp_peer_with_ip(self, remote_ip: str, vrf_name: str) -> Optional[BgpPeerConfig]:
         vrf = self.get_vrf(vrf_name)
         if vrf is not None:
@@ -146,7 +153,8 @@ class Device:
 class Network:
     def __init__(self, session: Session, snapshot_path: str, static_analysis: bool = False):
         self.bf: Session = session
-        self.inited: bool = False
+        self.inited_cp: bool = False
+        self.inited_dp: bool = False
         self.snapshot_path: str = snapshot_path
         self.static_analysis: bool = static_analysis
         self.devices: Dict[str, Device] = {}

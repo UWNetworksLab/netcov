@@ -74,3 +74,20 @@ def extract_bgp_neighbor_ip_vrf(name: str) -> Tuple[str, str]:
 
 def fraction_repr(covered: int, all: int) -> str:
     return f"{covered}/{all} ({'{:.2%}'.format(covered/all) if all != 0 else '0.00%'})"
+
+def is_data_plane_trace(node: DNode) -> bool:
+    return isinstance(node, RouteNode) or isinstance(node, DataplaneTestNode)
+
+def default_route_from_isp(session: BgpSessionStatus) -> BgpRoute:
+    isp_asn = int(session.remote_as)
+    return BgpRoute(
+        network='0.0.0.0/0',
+        protocol='bgp',
+        asPath=[[isp_asn], [65537]],
+        communities=[],
+        localPreference=0,
+        metric=0,
+        originatorIp='0.0.0.0',
+        originType='egp',
+        sourceProtocol='bgp',
+    )

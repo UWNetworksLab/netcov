@@ -36,20 +36,28 @@ class Coverage:
         self.trace: Set[DNode] = set()
         self.is_active = True
         self.latest_result = None
-        self._pre_computation()
+        self._init_control_plane_datamodel()
 
-    def _pre_computation(self) -> None:
+    def _init_control_plane_datamodel(self) -> None:
+        status_before = self.is_active
+        self.is_active = False
+        build_control_plane_datamodel(self.model)
+        self.is_active = status_before
+
+    def _init_data_plane_datamodel(self) -> None:
         status_before = self.is_active
         self.is_active = False
         external_ras_filename = os.path.join(self.model.snapshot_path, "external_bgp_announcements.json")
         external_ras = load_external_bgp_announcements(external_ras_filename) if os.path.exists(external_ras_filename) else []
-        pre_computation_for_lazy_construction(self.model, external_ras)
+        build_data_plane_datamodel(self.model, external_ras)
         self.is_active = status_before
 
     def result(self) -> None:
         status_before = self.is_active
         self.is_active = False
         tested_nodes = list(self.trace)
+        if not self.model.inited_dp and any([is_data_plane_trace(node) for node in tested_nodes]):
+            self._init_data_plane_datamodel()
         ifg_lazy_construction(self.model, tested_nodes)
         covered_lines = control_plane_coverage(self.model, tested_nodes)
         self.is_active = status_before
@@ -96,13 +104,13 @@ class Coverage:
             self.trace.update(convert_raw_config(element))
 
     @contextmanager
-    def track(self, lcov_filename: Optional[str] = None, reset: bool = True):
+    def track(self, reset: bool = True):
         try:
             self.resume()
             yield None
         finally:
             self.pause()
-            self.result(lcov_filename)
+            self.result()
             if reset:
                 self.reset()
 
