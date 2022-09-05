@@ -15,10 +15,14 @@ NetCov supports coverage tracking for the following [Batfish questions](https://
 - Direct inspection of routing tables via [routes](https://pybatfish.readthedocs.io/en/latest/notebooks/routingTables.html#Routes) and [bgpRib](https://pybatfish.readthedocs.io/en/latest/notebooks/routingTables.html#BGP-RIB) questions
 
 
-NetCov supports configuration formats of the following vendors:
+NetCov supports configuration syntax of the following vendors:
 
-- Cisco
-- Juniper
+|                    | Interface          | BGP neighbor       | Routing Policy     | Prefix list        | Community list     | As-path list       |
+|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| Cisco              | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Juniper            | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Arista             | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Palo Alto Networks | :heavy_check_mark: |                    |                    |                    |                    |                    |
 
 
 NetCov reports configuration coverage as the percentage of configuration lines that are covered, such as:
