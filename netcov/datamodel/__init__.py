@@ -18,3 +18,4 @@ from .netstate import *
 from .network import *
 from .sourcelines import *
 from .template import *
+from .configtypes import *

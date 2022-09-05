@@ -48,7 +48,6 @@ class NetCovSession(Session):
             upload, name=name, overwrite=overwrite, extra_args=extra_args
         )
         if enable_cov:
-            self.generate_dataplane()
             self.cov = Coverage(self, upload, static_analysis)
         assert isinstance(ss_name, str)  # Guaranteed since background=False
         return ss_name

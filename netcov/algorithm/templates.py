@@ -201,8 +201,13 @@ def worker_bgp_from_received_ra(network: Network, node: DNode) -> Tuple[List[DNo
         bgp_edge = network.get_bgp_edge(session.peer, "default", session.host, session.vrf)
         routes = bgp_edge.bgp_routes[node.prefix]
 
-        if len(routes) > 1:
+        if len(routes) == 0 and node.prefix == "0.0.0.0/0" and is_isp(session.peer):
+            route = default_route_from_isp(session)
+            bgp_edge.bgp_routes[node.prefix].append(route)
+            routes = [route]
+        if len(routes) > 1 or len(routes) == 0:
             logging.getLogger(__name__).warning(f"WARNING: expect unique external RA for {node}, actual matches: {len(routes)}")
+        
         pred_ra = routes[0]
         
         if bgp_edge.receiver_import_policy:
@@ -435,8 +440,9 @@ def worker_bgp_from_connected(network: Network, node: DNode) -> Tuple[List[DNode
 
     prefix = node.prefix
     nexthop = node.nexthop
-    connected_fr = vrf.get_rib("connected").frame
-    connected_matched_records = connected_fr[connected_fr["Network"] == prefix][(connected_fr["Next_Hop_IP"] == nexthop) | (connected_fr["Next_Hop_Interface"] == nexthop)].to_records()
+    rib = vrf.get_rib("connected")
+    prefix_matched = rib.select_prefix(prefix)
+    connected_matched_records = prefix_matched[(prefix_matched.Next_Hop_IP == nexthop) | (prefix_matched.Next_Hop_Interface == nexthop)]
     derived = []
     if len(connected_matched_records) == 1:
         rec = connected_matched_records[0]

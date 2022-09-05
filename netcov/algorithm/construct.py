@@ -21,20 +21,19 @@ from .utils import extract_bgp_neighbor_ip_vrf
 from ..datamodel.dnode import DNode
 from ..datamodel.network import *
 from ..datamodel.template import LazyTemplate
+from ..datamodel.configtypes import *
 from .templates import all_lazy_templates
 
 
-def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=[]):
+def build_control_plane_datamodel(network: Network):
     """build a custom python datamodel for control plane coverage. Information is
     retrieved via Batfish questions and is organized in a "Network" object.
     """
-    if network.inited:
+    if network.inited_cp:
         return
 
     bf = network.bf
     logger = logging.getLogger(__name__)
-    routes: pd.DataFrame = bf.q.routes().answer().frame()
-    bgpRoutes: pd.DataFrame = bf.q.bgpRib(status="/.*/").answer().frame()
     bgpConfig: pd.DataFrame = bf.q.bgpPeerConfiguration(nodes="/^(?!isp_).*/").answer().frame()
     bgpProcess: pd.DataFrame = bf.q.bgpProcessConfiguration().answer().frame()
     bgpSession: pd.DataFrame = bf.q.bgpSessionStatus().answer().frame()
@@ -65,47 +64,17 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
         if vrf is not None:
             vrf.bgp_enabled = True
 
-    # vrfs' ribs
-    network.cnt_rib_entry = len(routes.index)
-    for device_name, vrf_name, device, vrf in network.iter_vrfs():
-        # isp nodes are auxilliary nodes modeled by batfish
-        # we do not need to process their ribs
-        if device.is_isp:
-            continue
-
-        # vrf's main rib
-        main_fr = routes[(routes["Node"] == device_name) & (routes["VRF"] == vrf_name)]
-        main_rib = IndexedRib("main", device_name, vrf_name, main_fr)
-        vrf.add_rib("main", main_rib)
-
-        # vrf's connected rib (including static and interface-local)
-        connected_fr = main_fr[main_fr["Protocol"].isin(["connected", "local", "static"])]
-        connected_rib = IndexedRib("connected", device_name, vrf_name, connected_fr)
-        vrf.add_rib("connected", connected_rib)
-
-        # vrf's bgp rib
-        if vrf.bgp_enabled:
-            bgp_fr = bgpRoutes[(bgpRoutes["Node"] == device_name) & (bgpRoutes["VRF"] == vrf_name)]
-            bgp_rib = IndexedRib("bgp", device_name, vrf_name, bgp_fr)
-            vrf.add_rib("bgp", bgp_rib)
-
-        # parsing main rib into custom sorted structure for lpm
-        rib = vrf.rib
-        for rec in main_fr.itertuples():
-            rib.add_rule(rec.Network, rec.Next_Hop)
-
-
     # vrfs' bgp sessions and configs
     network.cnt_bgp_peer_configs = len(bgpConfig.index)
     for device_name, vrf_name, device, vrf in network.iter_vrfs():
-        if vrf.bgp_enabled == False:
+        if vrf.bgp_enabled == False or device.is_virtual:
             continue
         
         # vrf's bgp session status for each peer
         for rec in bgpSession[(bgpSession["Node"] == device_name) & (bgpSession["VRF"] == vrf_name)].itertuples():
             session = BgpSessionStatus(rec.Node, rec.VRF, rec.Remote_Node, rec.Local_AS, rec.Remote_AS, rec.Local_IP,\
                 rec.Remote_IP, rec.Local_Interface, rec.Remote_Interface, rec.Session_Type, rec.Established_Status)
-            if is_isp(rec.Remote_Node):
+            if is_virtual_node(rec.Remote_Node):
                 session.is_border = True
             vrf.bgp_sessions.append(session)
 
@@ -119,24 +88,10 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
                 configs.append(BgpPeerConfigP2p(rec.Node, rec.VRF, rec.Is_Passive, rec.Local_AS, rec.Export_Policy,\
                     rec.Import_Policy, rec.Peer_Group, rec.Local_IP, rec.Remote_IP, rec.Remote_AS))
         vrf.bgp_peer_configs.extend(configs)
-    
-    # override border bgp sessions
-    # for border_session in ext_sessions:
-    #     device_name = border_session["node"]
-    #     local_ip = border_session["local_ip"]
-    #     remote_as = border_session["remote_as"]
-    #     remote_ip = border_session["remote_ip"]
-    #     device = network.devices[device_name]
-    #     session = device.find_bgp_session_with_as_ip(remote_as, remote_ip)
-    #     # override
-    #     session.local_ip = local_ip
-    #     session.established_status = "ESTABLISHED"
-    #     session.is_border = True
-    #     session.peer = f"EXT_PEER({remote_as}, {remote_ip})"
 
     # bgp edges
     for device_name, vrf_name, device, vrf in network.iter_vrfs():
-        if device.is_isp:
+        if device.is_virtual:
             continue
         for session in vrf.bgp_sessions:
             if session.established_status == "ESTABLISHED":
@@ -159,6 +114,12 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
                     receiver_name = session.peer
                     receiver_device = network.devices[receiver_name]
                     receiver_session = receiver_device.find_bgp_session_with_as_ip(session.local_as, session.local_ip)
+                    # attempt to find valid bgp sessions with null local ip in some corner cases 
+                    if session.local_ip == None:
+                        receiver_session = receiver_device.find_bgp_session_with_as(session.local_as)
+                        if receiver_session and receiver_session.remote_ip:
+                            session.local_ip = receiver_session.remote_ip
+                            
                     if receiver_session == None:
                         logger.warning(f"Missing bgp session at {receiver_name} for {session}")
                         continue
@@ -172,48 +133,35 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
                         session.local_ip, session.remote_ip, sender_config.export_policies, receiver_config.import_policies)
                     network.add_bgp_edge(edge)
 
-    # parse external bgp annoucements for fast lookup
-    for ra in ext_ras:
-        device_name = ra["dstNode"]
-        peer_ip = ra["srcIp"]
-        peer_as = ra["asPath"][0][0]
-        session = network.devices[device_name].find_bgp_session_with_as_ip(peer_as, peer_ip)
-        vrf_name = session.vrf
-        border_edge = network.get_bgp_edge(f"isp_{peer_as}", "default", device_name, vrf_name)
-        prefix = ra["network"]
-        route = convert_external_ra(ra)
-        border_edge.bgp_routes[prefix].append(route)
     
     # source lines of defined structures
     structures_fr: pd.DataFrame = bf.q.definedStructures().answer().frame()
-    supported_config_types = [
-        "interface",
-        "policy-statement", "route-map",
-        "route-map entry", "route-map-clause", "policy-statement term",
-        "as-path", "community", "community-list",
-        #"prefix-list" added seperately
-        "bgp neighbor", "bgp group"
-    ]
+    supported_config_types = TYPE_NAMES_INTERFACE\
+        + TYPE_NAMES_ROUTEMAP\
+        + TYPE_NAMES_ROUTEMAP_CLAUSE\
+        + TYPE_NAMES_ASPATH\
+        + TYPE_NAMES_COMMUNITY\
+        + TYPE_NAMES_BGP_PEER\
+        # + TYPE_NAMES_PREFIXLIST
+
     for rec in structures_fr.itertuples():
         structure_type = rec.Structure_Type
-        if structure_type == "standard community-list":
-            structure_type = "community-list"
         network.source.add_source_lines(rec.Source_Lines)
         network.typed_source[structure_type].add_source_lines(rec.Source_Lines)
         if structure_type in supported_config_types:
             network.supported_source.add_source_lines(rec.Source_Lines)
         
         device_name = network.devicenames[rec.Source_Lines.filename]
-        if structure_type == "interface":
+        if structure_type in TYPE_NAMES_INTERFACE:
             device = network.devices[device_name]
             it = InterfaceConfig(device_name, rec.Structure_Name, rec.Source_Lines)
             device.interface_configs[rec.Structure_Name] = it
-        elif structure_type in ["policy-statement", "route-map"]:
+        elif structure_type in TYPE_NAMES_ROUTEMAP:
             device = network.devices[device_name]
             rm_name = rec.Structure_Name
             rm = Routemap(device_name, rm_name, rec.Source_Lines)
             device.routemaps[rm_name] = rm
-        elif structure_type in ["route-map entry", "route-map-clause", "policy-statement term"]:
+        elif structure_type in TYPE_NAMES_ROUTEMAP_CLAUSE:
             device = network.devices[device_name]
             cl_name = rec.Structure_Name
             words = cl_name.split(' ')
@@ -224,11 +172,11 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
                 device.raw_routemap_clauses[rm_name].append(cl)
             else:
                 logger.warning(f"Unable to parse route-map clause/policy-statement term name: {cl_name}")
-        elif structure_type in ["as-path", "community", "prefix-list", "ipv4 prefix-list", "community-list"]:
+        elif structure_type in TYPE_NAMES_ASPATH + TYPE_NAMES_COMMUNITY + TYPE_NAMES_PREFIXLIST:
             device = network.devices[device_name]
             config = ReferencedConfig(device_name, structure_type, rec.Structure_Name, rec.Source_Lines)
             device.referenced_configs[(structure_type, rec.Structure_Name)] = config
-        elif structure_type == "bgp neighbor":
+        elif structure_type in TYPE_NAMES_BGP_PEER:
             device = network.devices[device_name]
             prefix, vrf_name = extract_bgp_neighbor_ip_vrf(rec.Structure_Name)
             is_ipv4, remote_ip = convert_ipv4_prefix(prefix)
@@ -238,11 +186,11 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
                     config.lines = rec.Source_Lines
                 else:
                     logger.warning(f"Cannot find bgp peer for {remote_ip} at {device_name}")
-        elif structure_type == "bgp group":
+        elif structure_type in TYPE_NAMES_BGP_GROUP:
             device = network.devices[device_name]
             config = BgpGroupConfigRaw(device_name, rec.Structure_Name, rec.Source_Lines)
             device.raw_bgp_groups[rec.Structure_Name] = config
-        elif structure_type == "routing-instance":
+        elif structure_type == TYPE_NAMES_VRF:
             vrf_name = rec.Structure_Name
             vrf = network.get_vrf(device_name, vrf_name)
             if vrf is not None:
@@ -251,12 +199,11 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
     # refine prefix-list sourcelines
     vrf_and_bgp_lines = SourceLines()
     for rec in structures_fr.itertuples():
-        if rec.Structure_Type in ["bgp group", "routing-instance"]:
+        if rec.Structure_Type in TYPE_NAMES_BGP_GROUP + TYPE_NAMES_VRF:
             vrf_and_bgp_lines.add_source_lines(rec.Source_Lines)
     
-    prefix_list_types = ['prefix-list', 'ipv4 prefix-list']
     for rec in structures_fr.itertuples():
-        if rec.Structure_Type in prefix_list_types:
+        if rec.Structure_Type in TYPE_NAMES_PREFIXLIST:
             device_name = network.devicenames[rec.Source_Lines.filename]
             device = network.devices[device_name]
             list_lines = SourceLines()
@@ -306,15 +253,11 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
         device.raw_bgp_groups.clear()
 
     # refine route-map and clause data model
-    routemaps: pd.DataFrame = bf.q.definedStructures(types="policy-statement|route-map").answer().frame()
-    routemap_clauses: pd.DataFrame = bf.q.definedStructures(types="route-map-clause|policy-statement term|route-map entry").answer().frame()
+    routemaps: pd.DataFrame = bf.q.definedStructures(types='|'.join(TYPE_NAMES_ROUTEMAP)).answer().frame()
+    routemap_clauses: pd.DataFrame = bf.q.definedStructures(types='|'.join(TYPE_NAMES_ROUTEMAP_CLAUSE)).answer().frame()
     network.cnt_routemaps = len(routemaps.index)
     network.cnt_routemap_clauses = len(routemap_clauses.index)
-    clause_type_names = ["route-map entry", "route-map-clause", "policy-statement term"]
-    network.cnt_lines_routemaps = 0
-    for type in clause_type_names:
-        if type in network.typed_source:
-            network.cnt_lines_routemaps += network.typed_source[type].count()
+
     for device_name, device in network.devices.items():
         for rm_name, clauses in device.raw_routemap_clauses.items():
             rm = device.get_routemap(rm_name)
@@ -334,11 +277,14 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
         device.raw_routemap_clauses = {}
         
     # refine interface data model
-    interface_fr: pd.DataFrame = bf.q.interfaceProperties(nodes="/^(?!isp_).*/").answer().frame()
-    network.cnt_interface = len(interface_fr.index)
+    interface_fr: pd.DataFrame = bf.q.interfaceProperties().answer().frame()
+    network.cnt_interface = 0
     for rec in interface_fr.itertuples():
         device_name = rec.Interface.hostname
         device = network.devices[device_name]
+        if device.is_virtual:
+            continue
+        network.cnt_interface += 1
         interface_name = rec.Interface.interface
         vrf_name = rec.VRF
         vrf = network.get_vrf(device_name, vrf_name)
@@ -350,7 +296,7 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
             logger.warning(f"Missing interface config for {interface_name} at {device_name}")
 
     # referenced structrue
-    ref_fr: pd.DataFrame = bf.q.referencedStructures(types="as-path|community|prefix-list|ipv4 prefix-list|community-list").answer().frame()
+    ref_fr: pd.DataFrame = bf.q.referencedStructures(types='|'.join(TYPE_NAMES_ASPATH + TYPE_NAMES_COMMUNITY + TYPE_NAMES_PREFIXLIST)).answer().frame()
     for rec in ref_fr.itertuples():
         device_name = network.devicenames[rec.Source_Lines.filename]
         device = network.devices[device_name]
@@ -372,9 +318,59 @@ def pre_computation_for_lazy_construction(network: Network, ext_ras: List[Dict]=
         network.reachable_source = network.supported_source
 
     # pre-computation only needs to be done once
-    network.inited = True
+    network.inited_cp = True
 
-    
+def build_data_plane_datamodel(network: Network, ext_ras: List[Dict]=[]):
+    if network.inited_dp:
+        return
+
+    bf = network.bf
+    routes: pd.DataFrame = bf.q.routes().answer().frame()
+    bgpRoutes: pd.DataFrame = bf.q.bgpRib(status="/.*/").answer().frame()
+
+    # vrfs' ribs
+    network.cnt_rib_entry = len(routes.index)
+    for device_name, vrf_name, device, vrf in network.iter_vrfs():
+        # isp nodes are auxilliary nodes modeled by batfish
+        # we do not need to process their ribs
+        if device.is_virtual:
+            continue
+
+        # vrf's main rib
+        main_fr = routes[(routes["Node"] == device_name) & (routes["VRF"] == vrf_name)]
+        main_rib = IndexedRib("main", device_name, vrf_name, main_fr)
+        vrf.add_rib("main", main_rib)
+
+        # vrf's connected rib (including static and interface-local)
+        connected_fr = main_fr[main_fr["Protocol"].isin(["connected", "local", "static"])]
+        connected_rib = IndexedRib("connected", device_name, vrf_name, connected_fr)
+        vrf.add_rib("connected", connected_rib)
+
+        # vrf's bgp rib
+        if vrf.bgp_enabled:
+            bgp_fr = bgpRoutes[(bgpRoutes["Node"] == device_name) & (bgpRoutes["VRF"] == vrf_name)]
+            bgp_rib = IndexedRib("bgp", device_name, vrf_name, bgp_fr)
+            vrf.add_rib("bgp", bgp_rib)
+
+        # parsing main rib into custom sorted structure for lpm
+        rib = vrf.rib
+        for rec in main_fr.itertuples():
+            rib.add_rule(rec.Network, rec.Next_Hop)
+
+    # parse external bgp annoucements for fast lookup
+    for ra in ext_ras:
+        device_name = ra["dstNode"]
+        peer_ip = ra["srcIp"]
+        peer_as = ra["asPath"][0][0]
+        session = network.devices[device_name].find_bgp_session_with_as_ip(peer_as, peer_ip)
+        vrf_name = session.vrf
+        border_edge = network.get_bgp_edge(f"isp_{peer_as}", "default", device_name, vrf_name)
+        prefix = ra["network"]
+        route = convert_external_ra(ra)
+        border_edge.bgp_routes[prefix].append(route)
+
+    network.inited_dp = True
+
 def load_external_bgp_announcements(filename):
     with open(filename) as infile:
         content = json.load(infile)

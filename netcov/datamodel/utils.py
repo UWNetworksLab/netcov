@@ -68,6 +68,11 @@ def extract_digits(name: str) -> List[int]:
 def get_prefix_len(rule) -> int:
     return rule.prefix.prefixlen
 
+def is_virtual_node(device_name: str) -> bool:
+    if device_name == None:
+        return False
+    return device_name.startswith('isp_') or device_name == 'internet'
+
 def is_isp(device_name: str) -> bool:
     if device_name == None:
         return False

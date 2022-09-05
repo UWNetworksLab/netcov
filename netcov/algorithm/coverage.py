@@ -222,10 +222,19 @@ def coverage_stats(covered_nodes: Iterable[DNode], network: Network) -> SourceLi
 
     logger.critical(f"Breakdown:")
     for config_type, sources in network.typed_source.items():
+        if config_type not in SUPPORTED_CONFIG_TYPES:
+            continue
         cnt_all = sources.count()
         typed_covered_sources = covered_sources.intersect(sources)
         cnt_covered = typed_covered_sources.count()
         logger.critical(f"    {(config_type + ':').ljust(38)} {fraction_repr(cnt_covered, cnt_all)}")
+
+    # logger.warning(f"Unsupported:")
+    # for config_type, sources in network.typed_source.items():
+    #     if config_type in SUPPORTED_CONFIG_TYPES:
+    #         continue
+    #     cnt_all = sources.count()
+    #     logger.warning(f"    {(config_type + ':').ljust(38)} {cnt_all}")
     
     return covered_sources
 
