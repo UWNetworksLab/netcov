@@ -31,12 +31,15 @@ BGP_ROUTES_COLUMNS = ['AS_Path', 'Node', 'VRF', 'Network', 'Status', 'Next_Hop',
 USER_CONFIG_KEYS = ['host', 'lines']
 
 class Coverage:
-    def __init__(self, session: Session, snapshot_path: str, static_analysis=False) -> None:
+    def __init__(self, session: Session, snapshot_path: str, static_analysis: bool=False, prebuilt_model:Optional[str]=None) -> None:
         self.model: Network = Network(session, snapshot_path, static_analysis)
         self.trace: Set[DNode] = set()
         self.is_active = True
         self.latest_result = None
-        self._init_control_plane_datamodel()
+        if prebuilt_model is None:
+            self._init_control_plane_datamodel()
+        else:
+            self.load_model(prebuilt_model)
 
     def _init_control_plane_datamodel(self) -> None:
         status_before = self.is_active
@@ -138,4 +141,19 @@ class Coverage:
     def treevis(self, nodes: Optional[List[DNode]]=None) -> None:
         input_nodes = list(self.trace) if nodes is None else nodes
         print_dependency_graph_as_tree(input_nodes)
+
+    def save_model(self, filename: str) -> None:
+        model = self.model.__dict__
+        state_dict = {}
+        state_keys = Network.state_keys()
+        for key in state_keys:
+            if key in model:
+                state_dict[key] = model[key]
+        with open(filename, 'wb') as outfile:
+            pickle.dump(state_dict, outfile)
+
+    def load_model(self, filename: str) -> None:
+        with open(filename, 'rb') as infile:
+            state_dict = pickle.load(infile)
+        self.model.load_state_dict(state_dict)
             
