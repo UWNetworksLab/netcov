@@ -40,12 +40,11 @@ def control_plane_coverage(network: Network, tested_nodes: Iterable[DNode]) -> S
         dfs(node)
     
     # stats
-    logger = logging.getLogger(__name__)
-    logger.critical("Configuration coverage:")
-    covered_lines = coverage_stats(covered_nodes, network)
+    covered_lines = line_level_stats(covered_nodes)
+    log_metrics(covered_lines, network, "Configuration coverage")
     return covered_lines
 
-def weak_coverage(network: Network, tested_nodes: Iterable[DNode], enable_stats: bool = False) -> SourceLines:
+def weak_coverage(network: Network, tested_nodes: Iterable[DNode], metrics: List[str], enable_stats: bool = False) -> SourceLines:
     covered_nodes = set()
     visited = set()
     config_nodes = set()
@@ -154,15 +153,23 @@ def weak_coverage(network: Network, tested_nodes: Iterable[DNode], enable_stats:
         if isinstance(node, ConfigNode) and not is_strong:
             weak_nodes.add(node)
 
+    # stat
+    weak_lines = line_level_stats(weak_nodes)
+
+    if "strong" in metrics:
+        all_covered_lines = line_level_stats(covered_nodes)
+        log_metrics(all_covered_lines.diff(weak_lines), network, "Strong coverage")
+    if "weak" in metrics:
+        log_metrics(weak_lines, network, "Weak coverage")
+    
     if enable_stats:
+        logger = logging.getLogger(__name__)
+        logger.critical("BDD statistics:")
         for k, v in bdd.statistics().items():
-            print(f"{k}: {v}")
+            logger.critical(f"{k}: {v}")
     # force python garbage collection of BDD nodes
     bdd_vars.clear()
     predicates.clear()
-
-    print("\nWeak coverage:")
-    weak_lines = coverage_stats(weak_nodes, network)
     return weak_lines
 
 
@@ -188,28 +195,13 @@ def print_covered_config_elements(covered_nodes: List[DNode]):
     for node in covered_prefix_lists:
         print(f"  {node} {node.lines}")
 
-def coverage_stats(covered_nodes: Iterable[DNode], network: Network) -> SourceLines:
-    covered_sources = SourceLines()
-    cnt_covered_clauses = 0
-    cnt_covered_bgp_peers = 0
-    cnt_covered_interfaces = 0
-    for node in covered_nodes:
-        if isinstance(node, ConfigNode):
-            if node.lines:
-                covered_sources.add_source_lines(node.lines)
-            # element-specific stat
-            if isinstance(node, RoutemapClauseNode):
-                cnt_covered_clauses += 1
-            elif isinstance(node, BgpPeerConfigNode):
-                cnt_covered_bgp_peers += 1
-            elif isinstance(node, InterfaceConfigNode):
-                cnt_covered_interfaces += 1
-
+def log_metrics(covered_sources: SourceLines, network: Network, metric_name: str="Configuratio coverage") -> None:
     cnt_all = network.source.count()
     cnt_covered = covered_sources.count()
-    cnt_supported = network.supported_source.count()
+    #cnt_supported = network.supported_source.count()
     cnt_reachable = network.reachable_source.count()
     logger = logging.getLogger(__name__)
+    logger.critical(f"{metric_name}:")
     logger.critical(f"    Covered lines:                         {fraction_repr(cnt_covered, cnt_reachable)}")
     #logger.critical(f"    Not marked as dead:                    {fraction_repr(cnt_reachable, cnt_reachable)}")
     #logger.critical(f"    Modeled by NetCov:                     {fraction_repr(cnt_supported, cnt_reachable)}")
@@ -235,7 +227,13 @@ def coverage_stats(covered_nodes: Iterable[DNode], network: Network) -> SourceLi
     #         continue
     #     cnt_all = sources.count()
     #     logger.warning(f"    {(config_type + ':').ljust(38)} {cnt_all}")
-    
+
+def line_level_stats(covered_nodes: Iterable[DNode]) -> SourceLines:
+    covered_sources = SourceLines()
+    for node in covered_nodes:
+        if isinstance(node, ConfigNode):
+            if node.lines:
+                covered_sources.add_source_lines(node.lines)
     return covered_sources
 
 def bgp_group_breakdown(network: Network, covered_sources: SourceLines, plot_format=False) -> None:

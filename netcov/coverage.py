@@ -55,14 +55,21 @@ class Coverage:
         build_data_plane_datamodel(self.model, external_ras)
         self.is_active = status_before
 
-    def result(self) -> None:
+    def result(self, metrics: List[str]=[]) -> None:
         status_before = self.is_active
         self.is_active = False
         tested_nodes = list(self.trace)
         if not self.model.inited_dp and any([is_data_plane_trace(node) for node in tested_nodes]):
             self._init_data_plane_datamodel()
         ifg_lazy_construction(self.model, tested_nodes)
-        covered_lines = control_plane_coverage(self.model, tested_nodes)
+
+        if "vanilla" in metrics or len(metrics) == 0:
+            covered_lines = control_plane_coverage(self.model, tested_nodes)
+        
+        sub_metrics = [metric for metric in metrics if metric in ["weak", "strong"]] 
+        if len(sub_metrics) > 0:
+            weak_lines = weak_coverage(self.model, tested_nodes, sub_metrics, enable_stats=True)
+
         self.is_active = status_before
         self.latest_result = covered_lines
 
