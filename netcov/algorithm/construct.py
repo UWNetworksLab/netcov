@@ -199,21 +199,27 @@ def build_control_plane_datamodel(network: Network):
     # refine prefix-list sourcelines
     vrf_and_bgp_lines = SourceLines()
     for rec in structures_fr.itertuples():
-        if rec.Structure_Type in TYPE_NAMES_BGP_GROUP + TYPE_NAMES_VRF:
+        if rec.Structure_Type in TYPE_NAMES_BGP_GROUP + TYPE_NAMES_VRF + TYPE_NAMES_BGP_PEER:
             vrf_and_bgp_lines.add_source_lines(rec.Source_Lines)
     
-    for rec in structures_fr.itertuples():
-        if rec.Structure_Type in TYPE_NAMES_PREFIXLIST:
-            device_name = network.devicenames[rec.Source_Lines.filename]
-            device = network.devices[device_name]
-            list_lines = SourceLines()
-            list_lines.add_source_lines(rec.Source_Lines)
-            # some prefix-lists are expanded beyond their declarations by "apply-path" statement
-            remove_apply_path = list_lines.diff(vrf_and_bgp_lines)
-            network.supported_source.update(remove_apply_path)
-            config = device.referenced_configs[(rec.Structure_Type, rec.Structure_Name)]
-            filename = network.devicename_to_filename(device_name)
-            config.lines = remove_apply_path.to_filelines(filename)
+    for key in TYPE_NAMES_PREFIXLIST:
+        # reset typed source
+        if key in network.typed_source:
+            network.typed_source[key] = SourceLines()
+    for device_name, device in network.devices.items():
+        for (stype, sname), config in device.referenced_configs.items():
+            if stype in TYPE_NAMES_PREFIXLIST:
+                list_lines = SourceLines()
+                list_lines.add_source_lines(config.lines)
+                # some prefix-lists are expanded beyond their declarations by "apply-path" statement
+                remove_apply_path = list_lines.diff(vrf_and_bgp_lines)
+                # add to typed sources
+                network.supported_source.update(remove_apply_path)
+                network.typed_source[stype].update(remove_apply_path)
+                # update config
+                filename = network.devicename_to_filename(device_name)
+                config.lines = remove_apply_path.to_filelines(filename)
+
 
     # refine default vrf sourcelines
     for device_name, device in network.devices.items():
@@ -312,8 +318,7 @@ def build_control_plane_datamodel(network: Network):
         network.supported_source = network.supported_source.diff(unmodeled)
         network.reachable_source = network.supported_source.diff(dead)
         for stype, type_source in network.typed_source.items():
-            network.typed_source[stype] = type_source.diff(unmodeled)
-            network.typed_source[stype] = type_source.diff(dead)
+            network.typed_source[stype] = type_source.diff(unmodeled).diff(dead)
     else:
         network.reachable_source = network.supported_source
 
