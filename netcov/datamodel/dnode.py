@@ -289,6 +289,22 @@ class BgpPeerConfigPassiveNode(BgpPeerConfigNode):
     def __hash__(self) -> int:
         return hash((self.__class__.__name__, self.host, self.vrf, self.config_type, self.is_passive, self.local_as, self.export_policies, self.import_policies, self.peer_group, self.listen_range))
 
+class BgpGroupConfigNode(ConfigNode):
+    def __init__(self, host, vrf, config_type, group_name, lines) -> None:
+        super().__init__(host, config_type)
+        self.vrf: str = vrf
+        self.name: str = group_name
+        self.lines: FileLines = lines
+
+    def from_config(config: BgpGroupConfig):
+        return BgpGroupConfigNode(config.host, config.vrf, "bgp_group", config.name, config.lines)
+
+    def __repr__(self) -> str:
+        return f"BgpPeerGroup@{self.host}.{self.vrf} {self.name}"
+    
+    def __hash__(self) -> int:
+        return hash((self.__class__.__name__, self.host, self.vrf, self.config_type, self.name))
+
 class InterfaceConfigNode(ConfigNode):
     def __init__(self, host, config_type, name, lines) -> None:
         super().__init__(host, config_type)
@@ -318,43 +334,6 @@ class ReferencedConfigNode(ConfigNode):
 
     def __hash__(self) -> int:
         return hash((self.__class__.__name__, self.host, self.config_type, self.name))
-
-# class MatchRoutemapNode(DNode):
-#     def __init__(self, route, routemap, trace) -> None:
-#         super().__init__()
-#         self.route: BgpRoute = route
-#         self.routemap: Routemap = routemap
-#         self.trace: TraceTreeList = trace
-
-#     def __repr__(self) -> str:
-#         return f"Match({self.routemap}, BgpRoute(network={self.route.network}, asPath={self.route.asPath}))"
-
-#     def __hash__(self) -> int:
-#         return hash((self.__class__.__name__, unpack_bgp_route(self.route), self.routemap.host, self.routemap.name))
-
-# class MatchRoutemapClauseNode(DNode):
-#     def __init__(self, route, clause) -> None:
-#         super().__init__()
-#         self.route: BgpRoute = route
-#         self.clause: RoutemapClause = clause
-
-#     def __repr__(self) -> str:
-#         return f"Match({self.clause}, BgpRoute(network={self.route.network}, asPath={self.route.asPath}))"
-
-#     def __hash__(self) -> int:
-#         return hash((self.__class__.__name__, unpack_bgp_route(self.route), self.clause.host, self.clause.name))
-
-# class MatchKeywordNode(DNode):
-#     def __init__(self, route, referenced_config) -> None:
-#         super().__init__()
-#         self.route: BgpRoute = route
-#         self.referenced_config: ReferencedConfig = referenced_config
-
-#     def __repr__(self) -> str:
-#         return f"Match({self.referenced_config}, BgpRoute(network={self.route.network}, asPath={self.route.asPath}))"
-
-#     def __hash__(self) -> int:
-#         return hash((self.__class__.__name__, unpack_bgp_route(self.route), self.referenced_config.host, self.referenced_config.config_type, self.referenced_config.name))
 
 class EstablishedBgpSessionNode(DNode):
     def __init__(self, host, vrf, peer, peer_vrf, local_as, remote_as, local_ip, remote_ip, local_interface, remote_interface, session_type, is_border) -> None:

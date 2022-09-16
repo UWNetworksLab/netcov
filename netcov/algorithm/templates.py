@@ -685,11 +685,18 @@ def worker_bgp_session_from_peer_config(network: Network, node: DNode) -> Tuple[
 
     derived = []
     for config in matched_configs:
+        # bgp peer config
         if isinstance(config, BgpPeerConfigP2p):
             config_node = BgpPeerConfigP2pNode.from_config(config)
         else:
             config_node = BgpPeerConfigPassiveNode.from_config(config)
         derived.append(config_node)
+
+        # bgp group config
+        vrf = network.get_vrf(config.host, config.vrf)
+        group_config = vrf.find_bgp_group_for_peer(config)
+        if group_config is not None:
+            derived.append(BgpGroupConfigNode.from_config(group_config))
 
     return derived, derived, derived
 
