@@ -82,6 +82,12 @@ class Vrf:
                 return config
         return None
 
+    def find_bgp_group_for_peer(self, peer: BgpPeerConfig) -> Optional[BgpSessionStatus]:
+        group_name = peer.peer_group
+        if group_name in self.bgp_group_configs:
+            return self.bgp_group_configs[group_name]
+        return None
+
     def resolve_interface_for_ip(self, ip: str) -> Iterable[InterfaceConfig]:
         try:
             ipa = ipaddress.ip_address(ip)
