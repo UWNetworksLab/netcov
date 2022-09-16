@@ -43,13 +43,11 @@ class NetCovSession(Session):
         return answer
 
     # override
-    def init_snapshot(self, upload, name=None, overwrite=False, extra_args=None, enable_cov=True, static_analysis=False):
-        ss_name = self._init_snapshot(
-            upload, name=name, overwrite=overwrite, extra_args=extra_args
-        )
+    def init_snapshot(self, upload, name=None, overwrite=False, extra_args=None, enable_cov=True, static_analysis=False, prebuilt_model=None):
+        ss_name = super().init_snapshot(upload, name, overwrite, extra_args)
+
         if enable_cov:
-            self.cov = Coverage(self, upload, static_analysis)
-        assert isinstance(ss_name, str)  # Guaranteed since background=False
+            self.cov = Coverage(self, upload, static_analysis, prebuilt_model)
         return ss_name
 
     

@@ -180,6 +180,35 @@ class Network:
         self.cnt_rib_entry: int = -1
         self.cnt_interface: int = -1
 
+    def state_keys() -> Set[str]:
+        return [
+            "inited_cp",
+            "inited_dp",
+            "snapshot_path",
+            "static_analysis",
+            "devices",
+            "filenames",
+            "devicenames",
+            "bgp_edges",
+            "graph",
+            "source",
+            "supported_source",
+            "dead_source",
+            "reachable_source",
+            "typed_source",
+            "cnt_routemaps",
+            "cnt_routemap_clauses",
+            "cnt_bgp_peer_configs",
+            "cnt_rib_entry",
+            "cnt_interface",
+        ]
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        for key in Network.state_keys():
+            if key in state_dict:
+                setattr(self, key, state_dict[key])
+            else:
+                logging.getLogger(__name__).error(f"ERROR: missing key {key} while loading from state dict")
 
     def iter_vrfs(self) -> Generator[Tuple[str, str, Device, Vrf]]:
         for device_name, device in self.devices.items():
