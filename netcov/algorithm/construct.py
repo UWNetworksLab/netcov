@@ -15,6 +15,7 @@ import pandas as pd
 import json
 import pickle
 import logging
+import parse
 from typing import Dict, List, Iterable
 
 from .utils import extract_bgp_neighbor_ip_vrf
@@ -189,9 +190,9 @@ def build_control_plane_datamodel(network: Network):
                     logger.warning(f"Cannot find bgp peer for {remote_ip} at {device_name}")
         elif structure_type in TYPE_NAMES_BGP_GROUP:
             device = network.devices[device_name]
-            config = BgpGroupConfigRaw(device_name, rec.Structure_Name, rec.Source_Lines)
+            config = BgpGroupConfigRaw(device_name, rec.Structure_Name, structure_type, rec.Source_Lines)
             device.raw_bgp_groups[rec.Structure_Name] = config
-        elif structure_type == TYPE_NAMES_VRF:
+        elif structure_type in TYPE_NAMES_VRF:
             vrf_name = rec.Structure_Name
             vrf = network.get_vrf(device_name, vrf_name)
             if vrf is not None:
@@ -234,6 +235,9 @@ def build_control_plane_datamodel(network: Network):
         default_vrf.source_lines = default_vrf_lines
 
     # refine bgp groups data model
+    for key in TYPE_NAMES_BGP_GROUP:
+        if key in network.typed_source:
+            network.typed_source[key] = SourceLines()
     for device_name, device in network.devices.items():
         for group_name, bgp_group_raw in device.raw_bgp_groups.items():
             group_lines = SourceLines()
@@ -257,6 +261,7 @@ def build_control_plane_datamodel(network: Network):
                     config = BgpGroupConfig(device_name, vrf_name, group_name, lines, raw_lines)
                     config.peer_configs.extend(peers)
                     vrf.bgp_group_configs[group_name] = config
+                    network.typed_source[bgp_group_raw.typename].update(common_lines)
         device.raw_bgp_groups.clear()
 
     # refine route-map and clause data model
@@ -447,19 +452,30 @@ def dead_code_static_analysis(network: Network) -> Tuple[SourceLines, SourceLine
     unmodeled = SourceLines()
 
     bgp_group_and_vrf_lines = SourceLines()
-    bgp_group_and_vrf_fr: pd.DataFrame = bf.q.definedStructures(types="bgp group|routing-instance").answer().frame()
+    bgp_group_and_vrf_regex = "|".join(TYPE_NAMES_BGP_GROUP + TYPE_NAMES_VRF)
+    bgp_group_and_vrf_fr: pd.DataFrame = bf.q.definedStructures(types=bgp_group_and_vrf_regex).answer().frame()
     for rec in bgp_group_and_vrf_fr.itertuples():
         bgp_group_and_vrf_lines.add_source_lines(rec.Source_Lines)
 
-    # IPv6 bgp groups and neighbors
-    defined_fr: pd.DataFrame = bf.q.definedStructures(types="bgp group").answer().frame()
+    # IPv6 bgp groups
+    bgp_group_regex = "|".join(TYPE_NAMES_BGP_GROUP)
+    defined_fr: pd.DataFrame = bf.q.definedStructures(types=bgp_group_regex).answer().frame()
     for rec in defined_fr.itertuples():
         group_name = rec.Structure_Name
+        # heuristics
         if group_name[-1] == '6':
-            # IPv6 bgp groups
             unmodeled.add_source_lines(rec.Source_Lines)
             dead.add_source_lines(rec.Source_Lines)
-    
+    # IPv6 bgp neighbors
+    bgp_peer_regex = "|".join(TYPE_NAMES_BGP_PEER)
+    defined_fr: pd.DataFrame = bf.q.definedStructures(types=bgp_peer_regex).answer().frame()
+    for rec in defined_fr.itertuples():
+        peer_name = rec.Structure_Name
+        peer_ip, _ = parse.parse("{} ({})", peer_name)
+        if is_ipv6_prefix(peer_ip):
+            unmodeled.add_source_lines(rec.Source_Lines)
+            dead.add_source_lines(rec.Source_Lines)
+
     # structures that are defined but unused
     unused_fr: pd.DataFrame = bf.q.unusedStructures().answer().frame()
     for rec in unused_fr.itertuples():

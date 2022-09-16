@@ -62,6 +62,22 @@ def convert_ipv4_prefix(prefix: str) -> Tuple[bool, str]:
     ipn = ipaddress.ip_network(prefix, strict=False)
     return (ipn.version == 4), str(ipn.network_address)
 
+def is_ipv4_prefix(prefix: str) -> bool:
+    try:
+        ipn = ipaddress.ip_network(prefix, strict=False)
+    except:
+        return False
+    else:
+        return ipn.version == 4
+
+def is_ipv6_prefix(prefix: str) -> bool:
+    try:
+        ipn = ipaddress.ip_network(prefix, strict=False)
+    except:
+        return False
+    else:
+        return ipn.version == 6
+
 def extract_digits(name: str) -> List[int]:
     return [int(s) for s in re.findall(r'\d+', name)]
 
