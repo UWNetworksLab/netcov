@@ -89,9 +89,10 @@ class BgpPeerConfigP2p(BgpPeerConfig):
         return f"BgpPeerP2pConfig@{self.host}.{self.vrf} peer:{self.remote_as}@{self.remote_ip}"
 
 class BgpGroupConfigRaw:
-    def __init__(self, host, name, lines) -> None:
+    def __init__(self, host, name, typename, lines) -> None:
         self.host: str = host
         self.name: str = name
+        self.typename: str = typename
         self.lines: FileLines = lines
 
 class BgpGroupConfig:
