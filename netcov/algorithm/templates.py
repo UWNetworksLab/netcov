@@ -502,7 +502,7 @@ lazy_sent_ra_from_bgp = LazyTemplate(
     matcher=matcher_sent_ra_from_bgp,
     worker=worker_sent_ra_from_bgp,
     state_transition=state_transition_sent_ra_from_bgp,
-    edge_type="disj"
+    edge_type="conj"
 )
 
 def matcher_route_from_trp_traced_config(node: DNode) -> bool:
