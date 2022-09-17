@@ -68,7 +68,7 @@ class Coverage:
         
         sub_metrics = [metric for metric in metrics if metric in ["weak", "strong"]] 
         if len(sub_metrics) > 0:
-            weak_lines = weak_coverage(self.model, tested_nodes, sub_metrics, enable_stats=True)
+            weak_coverage(self.model, tested_nodes, sub_metrics, enable_stats=True)
 
         self.is_active = status_before
         self.latest_result = covered_lines
