@@ -105,9 +105,10 @@ class BgpGroupConfig:
         self.peer_configs: List[BgpPeerConfig] = []
 
 class Routemap:
-    def __init__(self, host: str, name: str, lines: FileLines) -> None:
+    def __init__(self, host: str, name: str, typename: str, lines: FileLines) -> None:
         self.host: str = host
         self.name: str = name
+        self.typename: str = typename
         self.lines: FileLines = lines
         self.raw_lines: FileLines = lines
         self.clauses: List[RoutemapClause] = []

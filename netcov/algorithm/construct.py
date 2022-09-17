@@ -161,7 +161,7 @@ def build_control_plane_datamodel(network: Network):
         elif structure_type in TYPE_NAMES_ROUTEMAP:
             device = network.devices[device_name]
             rm_name = rec.Structure_Name
-            rm = Routemap(device_name, rm_name, rec.Source_Lines)
+            rm = Routemap(device_name, rm_name, structure_type, rec.Source_Lines)
             device.routemaps[rm_name] = rm
         elif structure_type in TYPE_NAMES_ROUTEMAP_CLAUSE:
             device = network.devices[device_name]
@@ -270,23 +270,29 @@ def build_control_plane_datamodel(network: Network):
     network.cnt_routemaps = len(routemaps.index)
     network.cnt_routemap_clauses = len(routemap_clauses.index)
 
+    for key in TYPE_NAMES_ROUTEMAP:
+        if key in network.typed_source:
+            network.typed_source[key] = SourceLines()
     for device_name, device in network.devices.items():
         for rm_name, clauses in device.raw_routemap_clauses.items():
             rm = device.get_routemap(rm_name)
-            if rm is not None:
-                for cl in clauses:
-                    rm.add_clause(cl)
-                
-                common_lines = SourceLines()
-                common_lines.add_source_lines(rm.lines)
-                for cl in clauses:
-                    cl_lines = SourceLines()
-                    cl_lines.add_source_lines(cl.lines)
-                    common_lines = common_lines.diff(cl_lines)
-                filename = network.devicename_to_filename(device_name)
-                lines = common_lines.to_filelines(filename)
-                rm.lines = lines
+            if rm is  None:
+                continue
+            for cl in clauses:
+                rm.add_clause(cl)
+            
+            common_lines = SourceLines()
+            common_lines.add_source_lines(rm.lines)
+            for cl in clauses:
+                cl_lines = SourceLines()
+                cl_lines.add_source_lines(cl.lines)
+                common_lines = common_lines.diff(cl_lines)
+            filename = network.devicename_to_filename(device_name)
+            lines = common_lines.to_filelines(filename)
+            rm.lines = lines
         device.raw_routemap_clauses = {}
+        for rm_name, rm in device.routemaps.items():
+            network.typed_source[rm.typename].add_source_lines(rm.lines)
         
     # refine interface data model
     interface_fr: pd.DataFrame = bf.q.interfaceProperties().answer().frame()
