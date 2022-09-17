@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import logging
+import warnings
 from typing import Iterable
 import pickle
 import os
@@ -165,8 +166,12 @@ def weak_coverage(network: Network, tested_nodes: Iterable[DNode], metrics: List
     if enable_stats:
         logger = logging.getLogger(__name__)
         logger.critical("BDD statistics:")
-        for k, v in bdd.statistics().items():
-            logger.critical(f"{k}: {v}")
+        
+        warnings.filterwarnings("ignore")
+        stats = bdd.statistics()
+        keys = set(["n_vars", "n_nodes", "peak_nodes", "mem"])
+        for key in keys:
+            logger.critical(f"{key}: {stats[key]}")
     # force python garbage collection of BDD nodes
     bdd_vars.clear()
     predicates.clear()
