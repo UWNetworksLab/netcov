@@ -201,6 +201,9 @@ def print_covered_config_elements(covered_nodes: List[DNode]):
         print(f"  {node} {node.lines}")
 
 def log_metrics(covered_sources: SourceLines, network: Network, metric_name: str="Configuratio coverage") -> None:
+    # sanity unreachable
+    covered_sources = covered_sources.intersect(network.reachable_source)
+    
     cnt_all = network.source.count()
     cnt_covered = covered_sources.count()
     #cnt_supported = network.supported_source.count()
