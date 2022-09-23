@@ -200,17 +200,23 @@ def print_covered_config_elements(covered_nodes: List[DNode]):
     for node in covered_prefix_lists:
         print(f"  {node} {node.lines}")
 
-def log_metrics(covered_sources: SourceLines, network: Network, metric_name: str="Configuratio coverage") -> None:
+def log_metrics(covered_sources: SourceLines, network: Network, metric_name: str="Configuratio coverage", denominator: str="reachable") -> None:
+    if denominator == "reachable":
+        denom = network.reachable_source
+    elif denominator == "supported":
+        denom = network.supported_source
+    else:
+        raise NotImplemented
     # sanity unreachable
-    covered_sources = covered_sources.intersect(network.reachable_source)
+    covered_sources = covered_sources.intersect(denom)
     
-    cnt_all = network.source.count()
+    #cnt_all = network.source.count()
     cnt_covered = covered_sources.count()
     #cnt_supported = network.supported_source.count()
-    cnt_reachable = network.reachable_source.count()
+    cnt_denom = denom.count()
     logger = logging.getLogger(__name__)
     logger.critical(f"{metric_name}:")
-    logger.critical(f"    Covered lines:                         {fraction_repr(cnt_covered, cnt_reachable)}")
+    logger.critical(f"    Covered lines:                         {fraction_repr(cnt_covered, cnt_denom)}")
     #logger.critical(f"    Not marked as dead:                    {fraction_repr(cnt_reachable, cnt_reachable)}")
     #logger.critical(f"    Modeled by NetCov:                     {fraction_repr(cnt_supported, cnt_reachable)}")
     #logger.critical(f"    Modeled by Batfish:                    {fraction_repr(cnt_all, cnt_reachable)}")
@@ -221,13 +227,14 @@ def log_metrics(covered_sources: SourceLines, network: Network, metric_name: str
     #logger.critical(f"    Interface config:                      {fraction_repr(cnt_covered_interfaces, network.cnt_interface)}")
 
     logger.critical(f"Breakdown:")
-    for config_type, sources in network.typed_source.items():
+    for config_type, type_sources in network.typed_source.items():
         if config_type not in SUPPORTED_CONFIG_TYPES:
             continue
-        cnt_all = sources.count()
-        typed_covered_sources = covered_sources.intersect(sources)
+        type_sources = type_sources.intersect(denom)
+        cnt_type_sources = type_sources.count()
+        typed_covered_sources = covered_sources.intersect(type_sources)
         cnt_covered = typed_covered_sources.count()
-        logger.critical(f"    {(config_type + ':').ljust(38)} {fraction_repr(cnt_covered, cnt_all)}")
+        logger.critical(f"    {(config_type + ':').ljust(38)} {fraction_repr(cnt_covered, cnt_type_sources)}")
 
     # logger.warning(f"Unsupported:")
     # for config_type, sources in network.typed_source.items():
