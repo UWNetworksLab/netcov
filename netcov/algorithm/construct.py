@@ -329,8 +329,8 @@ def build_control_plane_datamodel(network: Network):
         network.source = network.source.diff(unmodeled)
         network.supported_source = network.supported_source.diff(unmodeled)
         network.reachable_source = network.supported_source.diff(dead)
-        for stype, type_source in network.typed_source.items():
-            network.typed_source[stype] = type_source.diff(unmodeled).diff(dead)
+        #for stype, type_source in network.typed_source.items():
+        #    network.typed_source[stype] = type_source.diff(unmodeled).diff(dead)
     else:
         network.reachable_source = network.supported_source
 
