@@ -14,11 +14,11 @@
 TYPE_NAMES_INTERFACE = ["interface"]
 TYPE_NAMES_ROUTEMAP = ["route-map", "policy-statement"]
 TYPE_NAMES_ROUTEMAP_CLAUSE = ["route-map entry", "route-map-clause", "policy-statement term"]
-TYPE_NAMES_ASPATH = ["as-path"]
-TYPE_NAMES_COMMUNITY = ["community", "community-list", "standard community-list"]
+TYPE_NAMES_ASPATH = ["as-path", "bgp as-path access-list"]
+TYPE_NAMES_COMMUNITY = ["community", "community-list", "standard community-list", "bgp community-list standard"]
 TYPE_NAMES_BGP_PEER = ["bgp neighbor"]
 TYPE_NAMES_BGP_GROUP = ["bgp group"]
-TYPE_NAMES_PREFIXLIST = ["prefix-list", "ipv4 prefix-list"]
+TYPE_NAMES_PREFIXLIST = ["prefix-list", "ipv4 prefix-list", "ip prefix-list"]
 TYPE_NAMES_VRF = ["routing-instance", "virtual-router"]
 
 SUPPORTED_CONFIG_TYPES = TYPE_NAMES_INTERFACE\
