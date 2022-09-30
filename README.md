@@ -23,6 +23,8 @@ NetCov supports configuration syntax of the following vendors:
 | Juniper            | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | Arista             | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | Palo Alto Networks | :heavy_check_mark: |                    |                    |                    |                    |                    |
+| SONiC              |                    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+
 
 If you’d like support for additional [vendors](https://pybatfish.readthedocs.io/en/latest/supported_devices.html) (which are supported by Batfish but unsupported by NetCov) or currently-unsupported configuration features, let us know via [GitHub issue](https://github.com/UWNetworksLab/netcov/issues). We'll try to add support, and it would help if you share a configuration example. You may want to use an [anonymizer](https://github.com/intentionet/netconan) before sharing.
 
