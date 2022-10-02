@@ -103,6 +103,16 @@ fh = logging.FileHandler('cov.log')
 logging.getLogger('netcov').addHandler(fh)
 ```
 
+## References
+```
+@article{netcov,
+  title={Test Coverage for Network Configurations},
+  author={Xu, Xieyang and Deng, Weixin and Beckett, Ryan and Mahajan, Ratul and Walker, David},
+  journal={arXiv preprint arXiv:2209.12870},
+  year={2022}
+}
+```
+
 
 
 
