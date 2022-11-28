@@ -39,7 +39,11 @@ class NetCovSession(Session):
 
         # hook: collect test trace
         if self.cov is not None:
-            self.cov.collect_trace(answer)
+            try:
+                self.cov.collect_trace(answer)
+            except Exception as e:
+                logging.getLogger(__name__).critical(f"NetCov failed to automatically collect coverage trace for this Batfish question due to an exception:")
+                logging.getLogger(__name__).error(e)
         return answer
 
     # override
@@ -47,7 +51,11 @@ class NetCovSession(Session):
         ss_name = super().init_snapshot(upload, name, overwrite, extra_args)
 
         if enable_cov:
-            self.cov = Coverage(self, upload, static_analysis, prebuilt_model)
+            try:
+                self.cov = Coverage(self, upload, static_analysis, prebuilt_model)
+            except Exception as e:
+                logging.getLogger(__name__).critical(f"NetCov failed to initialize for this snapshot due to an exception:")
+                logging.getLogger(__name__).error(e)
         return ss_name
 
     
