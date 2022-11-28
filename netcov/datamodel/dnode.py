@@ -95,7 +95,7 @@ class MainRouteNode(RouteNode):
     def from_rec(rec: np.record) -> Optional[MainRouteNode]:
         if rec.Protocol in ['connected', 'local', 'static']:
             node_main = MainRouteNode("main", rec.Network, rec.Next_Hop_Interface, rec.Node, rec.VRF, rec.Protocol)
-        elif rec.Protocol in ['bgp', 'ibgp', 'aggregate', 'isisL1', 'isisL2', 'isisEL1']:
+        elif rec.Protocol in ['bgp', 'ibgp', 'aggregate', 'isisL1', 'isisL2', 'isisEL1', 'ospf']:
             nexthop = rec.Next_Hop_IP
             if nexthop == None or nexthop == "AUTO/NONE(-1l)":
                 nexthop = rec.Next_Hop_Interface
