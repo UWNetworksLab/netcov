@@ -98,7 +98,9 @@ def convert_trp_traces(network: Network, trps: List[pd.DataFrame], filter_by_act
 def convert_main_rib_routes(routes: pd.DataFrame) -> List[DNode]:
     tested_nodes = set()
     for rec in routes.to_records():
-        tested_nodes.add(MainRouteNode.from_rec(rec))
+        route_node = MainRouteNode.from_rec(rec)
+        if tested_nodes is not None:
+            tested_nodes.add(route_node)
     return list(tested_nodes)
 
 def convert_bgp_routes(routes: pd.DataFrame) -> List[DNode]:
