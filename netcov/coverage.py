@@ -96,6 +96,8 @@ class Coverage:
                 self.trace.update(convert_main_rib_routes(answer.frame()))
             elif answer['question']['class'] == 'org.batfish.question.routes.RoutesQuestion' and answer['question']['rib'] == 'BGP':
                 self.trace.update(convert_bgp_routes(answer.frame()))
+            elif answer['question']['class'] == 'org.batfish.question.interfaceproperties.InterfacePropertiesQuestion':
+                self.trace.update(convert_interface_config(answer.frame(), self.model))
 
     def add_tested_routes(self, frame: pd.DataFrame) -> None:
         if all(col in frame.columns for col in BGP_ROUTES_COLUMNS):

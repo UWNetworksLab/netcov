@@ -114,3 +114,21 @@ def convert_raw_config(config: Dict) -> List[DNode]:
     config_type = config['type'] if 'type' in config else 'user-supplied'
     node = UserSuppliedConfigNode(config['host'], file_lines, config_type)
     return node
+
+def convert_interface_config(interfaces: pd.DataFrame, network: Network) -> List[DNode]:
+    tested_nodes = set()
+    for rec in interfaces.to_records():
+        hostname = rec.Interface.hostname
+        vrf_name = rec.VRF
+        interface_name = rec.Interface.interface
+
+        vrf = network.get_vrf(hostname, vrf_name)
+        if vrf is None:
+            logging.getLogger(__name__).error(f"Cannot find VRF for interface record {rec.Interface}")
+            continue
+        if interface_name in vrf.interfaces:
+            it = vrf.interfaces[interface_name]
+            it_node = InterfaceConfigNode.from_interface(it)
+            tested_nodes.add(it_node)
+          
+    return list(tested_nodes)
