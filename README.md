@@ -1,5 +1,5 @@
 # NetCov
-NetCov is an open-source tool that can be used with [Batfish](https://github.com/batfish/batfish) to analyze test coverage for network configurations. Given a set of Batfish queries, it analyzes which lines of configurations has/has not been covered. The result can be used to assess the rigorousness of the test suite and help discover the blind spots. Please refer to our [paper](https://github.com/UWNetworksLab/netcov) for technical details.
+NetCov is an open-source tool that can be used with [Batfish](https://github.com/batfish/batfish) to analyze test coverage for network configurations. Given a set of Batfish queries, it analyzes which lines of configurations has/has not been covered. The result can be used to assess the rigorousness of the test suite and help discover the blind spots. Please refer to our [paper](https://www.usenix.org/conference/nsdi23/presentation/xu) for technical details.
 
 
 NetCov is written in Python and can be used in concert with [pybatfish](https://pybatfish.readthedocs.io/en/latest/notebooks/interacting.html), Batfish's Python API.
