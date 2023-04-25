@@ -8,26 +8,23 @@ assert "BF_SNAPSHOT_DIR" in os.environ, "Environment variable BF_SNAPSHOT_DIR sh
 
 BF_SNAPSHOT_DIR = os.environ["BF_SNAPSHOT_DIR"]
 BF_HOST = os.environ.get("BF_HOST", "localhost")
+REPORT_DIR = os.environ.get("NETCOV_REPORT_DIR")
+
+assert REPORT_DIR is not None and not os.path.exists(REPORT_DIR), f"Report directory {REPORT_DIR} already exists"
 
 bf_session = Session(host=BF_HOST)
-#bf_session.cov.result()
 bf_session.init_snapshot(BF_SNAPSHOT_DIR)
 
 
 @pytest.fixture(scope="session")
 def bf() -> Session:
-    """Fixture to create a session to the Batfish service and initialize the snapshot."""
     return bf_session
 
 
-# def pytest_sessionstart(session):
-#     session.bf = session.getfixturevalue("bf")
-
-
 def pytest_sessionfinish(session, exitstatus):
-    # bf = session.bf
-    #print(bf_session)
-    #print(bf_session.snapshot)
     logging.getLogger("netcov").addHandler(logging.StreamHandler())
     bf_session.cov.result()
+    if REPORT_DIR is not None:
+        bf_session.cov.html_report(lcov_path=f"{REPORT_DIR}/lcov", html_path=f"{REPORT_DIR}/html")
+
 
