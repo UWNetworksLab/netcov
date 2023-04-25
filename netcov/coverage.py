@@ -74,16 +74,22 @@ class Coverage:
         self.latest_result = covered_lines
 
     def html_report(self, lcov_path: Optional[str] = None, html_path: Optional[str] = None) -> None:
-        if lcov_path is None:
-            lcov_path = os.path.join("coverage", "lcov.info")
-        if html_path is None:
-            html_path = os.path.join("coverage", "HTML_REPORT")
-        
-        if self.latest_result == None:
+        lcov_path = os.path.join(self.model.snapshot_path, "coverage", "lcov.info") if lcov_path is None \
+            else os.path.abspath(lcov_path)
+        html_path = os.path.join(self.model.snapshot_path, "coverage", "HTML_REPORT") if html_path is None \
+            else os.path.abspath(html_path)
+
+        if self.latest_result is None:
             self.result()
-        logging.getLogger('netcov').warning(f"Writing coverage report to {os.path.join(self.model.snapshot_path, html_path)}")
-        dump_lcov(self.latest_result, self.model.reachable_source, os.path.join(self.model.snapshot_path, lcov_path), True)
-        p = subprocess.Popen(["genhtml", lcov_path, "--output-directory", html_path, "--no-function-coverage", "--title", "NetCov", "--legend"], cwd=self.model.snapshot_path, stdout=subprocess.DEVNULL)
+        logging.getLogger('netcov').warning(f"Writing coverage report to {html_path}")
+        dump_lcov(self.latest_result, self.model.reachable_source, lcov_path, True)
+        p = subprocess.Popen(["genhtml", lcov_path,
+                              "--output-directory", html_path,
+                              "--no-function-coverage",
+                              "--title", "NetCov",
+                              "--legend"],
+                             cwd=self.model.snapshot_path,
+                             stdout=subprocess.DEVNULL)
         p.wait()
 
     def collect_trace(self, answer: Answer) -> None:
