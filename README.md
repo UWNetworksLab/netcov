@@ -1,5 +1,5 @@
 # NetCov
-NetCov is an open-source tool that can be used with [Batfish](https://github.com/batfish/batfish) to analyze test coverage for network configurations. Given a set of Batfish queries, it analyzes which lines of configurations has/has not been covered. The result can be used to assess the rigorousness of the test suite and help discover the blind spots. Please refer to our [paper](https://arxiv.org/pdf/2209.12870.pdf) for technical details.
+NetCov is an open-source tool that can be used with [Batfish](https://github.com/batfish/batfish) to analyze test coverage for network configurations. Given a set of Batfish queries, it analyzes which lines of configurations has/has not been covered. The result can be used to assess the rigorousness of the test suite and help discover the blind spots. Please refer to our [paper](https://github.com/UWNetworksLab/netcov) for technical details.
 
 
 NetCov is written in Python and can be used in concert with [pybatfish](https://pybatfish.readthedocs.io/en/latest/notebooks/interacting.html), Batfish's Python API.
@@ -106,13 +106,18 @@ logging.getLogger('netcov').addHandler(fh)
 
 ## References
 ```
-@article{netcov,
-  title={Test Coverage for Network Configurations},
-  author={Xu, Xieyang and Deng, Weixin and Beckett, Ryan and Mahajan, Ratul and Walker, David},
-  journal={arXiv preprint arXiv:2209.12870},
-  year={2022}
-}
-```
+@inproceedings {netcov-nsdi-2023,
+  author = {Xieyang Xu and Weixin Deng and Ryan Beckett and Ratul Mahajan and David Walker},
+  title = {Test Coverage for Network Configurations},
+  booktitle = {20th USENIX Symposium on Networked Systems Design and Implementation (NSDI 23)},
+  year = {2023},
+  isbn = {978-1-939133-33-5},
+  address = {Boston, MA},
+  pages = {1717--1732},
+  url = {https://www.usenix.org/conference/nsdi23/presentation/xu},
+  publisher = {USENIX Association},
+  month = apr,
+}```
 
 
 
