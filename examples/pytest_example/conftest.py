@@ -1,5 +1,6 @@
 import os
 import pytest
+import logging
 
 from netcov import NetCovSession as Session
 
@@ -8,8 +9,8 @@ assert "BF_SNAPSHOT_DIR" in os.environ, "Environment variable BF_SNAPSHOT_DIR sh
 BF_SNAPSHOT_DIR = os.environ["BF_SNAPSHOT_DIR"]
 BF_HOST = os.environ.get("BF_HOST", "localhost")
 
-bf_session = Session.get(host=BF_HOST)
-bf_session.cov.result()
+bf_session = Session(host=BF_HOST)
+#bf_session.cov.result()
 bf_session.init_snapshot(BF_SNAPSHOT_DIR)
 
 
@@ -25,7 +26,8 @@ def bf() -> Session:
 
 def pytest_sessionfinish(session, exitstatus):
     # bf = session.bf
-    print(bf_session)
-    print(bf_session.snapshot)
-    print(bf_session.cov)
+    #print(bf_session)
+    #print(bf_session.snapshot)
+    logging.getLogger("netcov").addHandler(logging.StreamHandler())
+    bf_session.cov.result()
 
